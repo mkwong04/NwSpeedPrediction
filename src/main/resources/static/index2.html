@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link class="include" rel="stylesheet" type="text/css" href="./jquery.jqplot.min.css" />
+		<script src="./jquery.min.js"></script>
+		<script src="./jquery.jqplot.min.js"></script>
+		
+		<script class="include" type="text/javascript" src="./plugins/jqplot.pieRenderer.js"></script>
+	</head>
+	<body>
+		<div>
+			<h1> Predict Network Speed against Advertised Network Speed</h1>
+			<form action="">
+				<label for="hisPlanField">High Speed Internet Plan:</label>
+				<select id="hisPlanField">
+					<option value="HIS 100 Mbps">100 Mbps</option>
+					<option value="HIS 80 Mbps">80 Mbps</option>
+					<option value="HIS 60 Mbps">60 Mbps</option>
+					<option value="HIS 40 Mbps">40 Mbps</option>
+				</select>
+				<br>
+				
+				<label for="connTypeField">Connection Type:</label>
+				<select id="connTypeField">
+					<option value="Dedicated">Dedicated</option>
+					<option value="Virtual-Circuit">Virtual-Circuit</option>
+					<option value="Telephone landline">Telephone Landline</option>
+				</select>
+				<br>
+				
+				<label for="peakHoursIndField">Peak Hour?:</label>
+				<select id="peakHoursIndField">
+					<option value="Y">Yes</option>
+					<option value="N">No</option>
+				</select>
+				<br>
+				
+				<label for="zipCodeField">Zip Code:</label>
+				<select id="zipCodeField">
+					<option value="100001">100001</option>
+					<option value="100002">100002</option>
+					<option value="100003">100003</option>
+					<option value="100004">100004</option>
+					<option value="100005">100005</option>
+					<option value="100006">100006</option>
+					<option value="100007">100007</option>
+					<option value="100008">100008</option>
+					<option value="100009">100009</option>
+					<option value="100010">100010</option>
+				</select>
+				
+				<br>
+				<br>
+				<button id="predictButton" type="button" value="predict" onclick="javascript:predict();">Predict</button>
+				<br>
+				<br>
+			</form>
+		</div>
+		<div >
+			<hr>
+			<strong>Predicted Result:</strong> 
+			<strong id="responseField"></strong>
+		</div>
+		<div>
+			<div id="pieChart"></div>
+		</div>
+		
+		<script type="text/javascript">
+				var predicting = false;
+		
+				function predict(){
+					
+					if(predicting === true){
+						return;
+					}
+					
+					predicting = true;
+					
+					$('#responseField').empty();
+				
+					var req ={};
+					
+					req['connectionType'] = $('#connTypeField').val();
+					req['hisPlan'] = $('#hisPlanField').val();
+					req['peakHourInd'] = $('#peakHoursIndField').val();
+					req['zipCode'] = $('#zipCodeField').val();
+					
+					$.ajax({
+						type: "POST",
+						url: "/api/networkspeed/predict",
+						data: JSON.stringify(req),
+						contentType: "application/json",
+						crossDomain: true,
+						success: function(response){
+							if(response){
+								
+								$('#responseField').append(response.predictedResult).append('<br/>');
+								
+								if(response.classificationProbabilities){
+									
+									var data = [];
+									for(var idx=0; idx<response.classificationProbabilities.length; idx++){
+										$('#responseField').append('<br\>').append(response.classificationProbabilities[idx].name+' : '+response.classificationProbabilities[idx].probability);
+										
+										data.push([response.classificationProbabilities[idx].name, 
+										           response.classificationProbabilities[idx].probability * 100]);
+									}
+									
+									$.jqplot ('pieChart', 
+											[ data ], 
+											{
+												seriesDefaults: {
+													// Make this a pie chart.
+											        renderer: $.jqplot.PieRenderer, 
+											        rendererOptions: {
+											        	// Put data labels on the pie slices.
+														// By default, labels show the percentage of the slice.
+														showDataLabels: true
+													}
+												}, 
+											    legend: { show:true, location: 'e' }
+											});
+								}
+							}	
+						},
+						complete: function(jqXHR, textStatus){
+							predicting = false;
+						}
+					});
+				}
+		
+		</script>
+	</body>
+</html>
